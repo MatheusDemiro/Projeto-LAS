@@ -105,9 +105,9 @@ void log(char *msg, float volume, int distancia){
     reservatorioLog.close();
     Serial.println("Done.");
   }else{
-    arquivoLog = SD.open("ini.txt", FILE_WRITE);
-    arquivoLog.println("Erro ao abrir arquivo 'regv.txt'.");
-    arquivoLog.close();
+    //arquivoLog = SD.open("ini.txt", FILE_WRITE);
+    //arquivoLog.println("Erro ao abrir arquivo 'regv.txt'.");
+    //arquivoLog.close();
     Serial.println("Erro ao abrir arquivo 'regv.txt'.");
   }
 }
