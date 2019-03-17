@@ -14,8 +14,7 @@ RTC_DS1307 rtc;
 
 File arquivoLog;
 File reservatorioLog;
-
-byte sd_pin = 10; //Acesso ao SD card
+const byte sd_pin = 10; //Acesso ao SD card
 double volume;
 unsigned int distancia;
 
@@ -26,24 +25,31 @@ const uint16_t array_volume[ARRAY_SIZE] PROGMEM = {495, 494, 493, 492, 491, 490,
 void setup()
 {
   Serial.begin(115200);
-  arquivoLog = SD.open("inicializacao.log", FILE_WRITE);
   //Inicializando o cartao SD
-  arquivoLog.print("Inicializando cartão SD...");
+  Serial.println("Inicializando cartão SD...");
   if (!SD.begin(sd_pin)){
-    arquivoLog.print("Falha na inicialização do cartão SD!\n");
-    return;
+    Serial.println("Falha na inicialização do cartão SD!\n");
+    while (1); //fica aqui para sempre
   }
-
-  arquivoLog.print("Cartão SD iniciado com sucesso.");
+  Serial.println("Cartão SD inicializado com sucesso.");
+  if (arquivoLog = SD.open("ini.txt", FILE_WRITE)){
+    Serial.println("Arquivo encontrado.");
+    arquivoLog.println("Cartão SD iniciado com sucesso.");
+  } else{
+    Serial.println("Arquivo 'inicializacao.txt' não encontrado.");
+    while (1);
+  }
 
   //Valida a inicializacao do RTC
   if (!rtc.begin()){
-    arquivoLog.print("RTC não encontrado!");
+    arquivoLog.println("RTC não encontrado!");
+    Serial.println("RTC não encontrado!");
     arquivoLog.close();
     while (1); //fica aqui para sempre
   }
   if (!rtc.isrunning()){
-    arquivoLog.print("RTC não está funcionando!");
+    arquivoLog.println("RTC não está funcionando!");
+    Serial.println("RTC não está funcionando!");
 
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); //Ajuste de data e hora na compilação, pela substituição das macros
 
@@ -58,14 +64,14 @@ void loop(void)
 {
   distancia = calcularDistancia(); //Distancia informada pelo sensor ultrassonico
   if (distancia > 0){
+    delay(300000);//Atualizar para realizar cálculo de distância de 5 em 5 minutos
     volume = pgm_read_word_near(array_volume+distancia-1);
     Serial.println(volume);
     Serial.println(distancia);
-    log("Volume calculado com sucesso!", volume);
-    delay(1000);//Atualizar para realizar cálculo de distância de 5 em 5 minutos
+    log("Volume calculado com sucesso!", volume, distancia);
   }
   else{
-    log("Reservatório cheio.", volume);
+    log("Reservatório cheio.", volume, distancia);
   }
 }
 
@@ -73,26 +79,35 @@ unsigned int calcularDistancia(void){
   return ultrasonic.distanceRead();
 }
 
-void log(char *msg, float volume){
+void log(char *msg, float volume, int distancia){
   Serial.println("Loggin..");
-  reservatorioLog = SD.open("registro_volume.txt", FILE_WRITE);
-  
-  DateTime now = rtc.now();
+  if (reservatorioLog = SD.open("regv.txt", FILE_WRITE)){
+    DateTime now = rtc.now();
 
-  reservatorioLog.println();
-  reservatorioLog.print(now.day(), DEC);
-  reservatorioLog.print("/");
-  reservatorioLog.print(now.month(), DEC);
-  reservatorioLog.print("/");
-  reservatorioLog.print(now.year(), DEC);
-  reservatorioLog.print(" ");
-  reservatorioLog.print(now.hour(), DEC);
-  reservatorioLog.print(":");
-  reservatorioLog.print(now.minute(), DEC);
-  reservatorioLog.print(":");
-  reservatorioLog.print(now.second(), DEC);
-  reservatorioLog.print(" ");
-  reservatorioLog.print(volume);
-  reservatorioLog.close();
-  Serial.println("Done.");
+    reservatorioLog.println();
+    reservatorioLog.print(now.day(), DEC);
+    reservatorioLog.print("/");
+    reservatorioLog.print(now.month(), DEC);
+    reservatorioLog.print("/");
+    reservatorioLog.print(now.year(), DEC);
+    reservatorioLog.print(" ");
+    reservatorioLog.print(now.hour(), DEC);
+    reservatorioLog.print(":");
+    reservatorioLog.print(now.minute(), DEC);
+    reservatorioLog.print(":");
+    reservatorioLog.print(now.second(), DEC);
+    reservatorioLog.print(" ");
+    reservatorioLog.print("volume: ");
+    reservatorioLog.print(volume);
+    reservatorioLog.print(" ");
+    reservatorioLog.print("distancia: ");
+    reservatorioLog.print(distancia);
+    reservatorioLog.close();
+    Serial.println("Done.");
+  }else{
+    arquivoLog = SD.open("ini.txt", FILE_WRITE);
+    arquivoLog.println("Erro ao abrir arquivo 'regv.txt'.");
+    arquivoLog.close();
+    Serial.println("Erro ao abrir arquivo 'regv.txt'.");
+  }
 }
